@@ -41,9 +41,17 @@ int main(int argc, char *argv[])
     // Get the mesh elements (index tuples)
     std::vector<std::array<int, 3>> meshElements;
     meshElements.emplace_back(std::array<int, 3>{0, 1, 2});
-    meshElements.emplace_back(std::array<int, 3>{1, 3, 2}); 
+    meshElements.emplace_back(std::array<int, 3>{1, 3, 2});
+    meshElements.emplace_back(std::array<int, 3>{4, 6, 7});
+    meshElements.emplace_back(std::array<int, 3>{4, 7, 5});
+    meshElements.emplace_back(std::array<int, 3>{0, 4, 5});
+    meshElements.emplace_back(std::array<int, 3>{0, 5, 1});
+    meshElements.emplace_back(std::array<int, 3>{2, 6, 3});
+    meshElements.emplace_back(std::array<int, 3>{3, 6, 7});
     meshElements.emplace_back(std::array<int, 3>{1, 7, 3});
     meshElements.emplace_back(std::array<int, 3>{1, 5, 7});
+    meshElements.emplace_back(std::array<int, 3>{0, 2, 4});
+    meshElements.emplace_back(std::array<int, 3>{2, 6, 4});
    
     // Usd currently requires an extent, somewhat unfortunately.
     GfRange3f extent;
