@@ -1,3 +1,4 @@
 add_subdirectory(quadFacedCube)
 add_subdirectory(latticeMesh)
 add_subdirectory(latticeMeshBoundary)
+add_subdirectory(latticeMeshBoundaryRelaxation)
