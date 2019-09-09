@@ -126,7 +126,7 @@ struct LatticeMesh : public AnimatedMesh<T, 4>
 
     void initialize()
     {
-        initializeUSD("latticeMesh.usda");
+        initializeUSD("latticeMeshBoundary.usda");
 
         // Create a Cartesian lattice topology
         for(int cell_i = 0; cell_i < m_cellSize[0]; cell_i++)
@@ -161,12 +161,15 @@ struct LatticeMesh : public AnimatedMesh<T, 4>
         // Animate frame as to bend the plane into a half-cylinder
         for(int node_i = 0, p = 0; node_i <= m_cellSize[0]; node_i++){
             double u = (double) node_i / (double) m_cellSize[0];
-            for(int node_j = 0; node_j <= m_cellSize[1]; node_j++)
+            for(int node_j = 0; node_j <= m_cellSize[1]; node_j++){
+                if( (node_i > 0) && (node_i < m_cellSize[0]) &&
+                    (node_j > 0) && (node_j < m_cellSize[1]) ) { p++; continue; } // Skip nodes in the interior
                 m_particleX[p++] = GfVec3f{
                     (float) (radius * std::sin( u * angle )),
                     m_gridDX * (T)node_j,
                     (float) (radius * (1.0 - std::cos( u * angle )))
                 };
+            }
         }        
     }
 

@@ -11,7 +11,6 @@
 #include "pxr/base/gf/range3f.h"
 
 #include <iostream>
-#include <cmath>
 
 PXR_NAMESPACE_USING_DIRECTIVE
 
@@ -28,6 +27,8 @@ struct AnimatedMesh
     
     std::vector<std::array<int, d>> m_meshElements;
     std::vector<GfVec3f> m_particleX;
+
+public:
 
     AnimatedMesh()
         :m_lastFrame(-1)
@@ -110,87 +111,36 @@ struct AnimatedMesh
     }
 };
 
-template<class T>
-struct LatticeMesh : public AnimatedMesh<T, 4>
-{
-    using Base = AnimatedMesh<T, 4>;
-    using Base::m_meshElements;
-    using Base::m_particleX;
-    using Base::initializeUSD;
-    using Base::initializeTopology;
-    using Base::initializeParticles;
-
-    std::array<int, 2> m_cellSize; // dimensions in grid cells
-    T m_gridDX;
-    int m_nFrames;
-
-    void initialize()
-    {
-        initializeUSD("latticeMesh.usda");
-
-        // Create a Cartesian lattice topology
-        for(int cell_i = 0; cell_i < m_cellSize[0]; cell_i++)
-        for(int cell_j = 0; cell_j < m_cellSize[1]; cell_j++)
-            m_meshElements.emplace_back(
-                std::array<int, 4>{
-                    gridToParticleID(cell_i  , cell_j  ), 
-                    gridToParticleID(cell_i+1, cell_j  ),
-                    gridToParticleID(cell_i+1, cell_j+1),
-                    gridToParticleID(cell_i  , cell_j+1)
-                }
-            );
-        initializeTopology();
-
-        // Also initialize the associated particles
-
-        for(int node_i = 0; node_i <= m_cellSize[0]; node_i++)
-        for(int node_j = 0; node_j <= m_cellSize[1]; node_j++)
-            m_particleX.emplace_back(m_gridDX * (T)node_i, m_gridDX * (T)node_j, T());
-        initializeParticles();
-
-    }
-
-
-    void prepareFrame(const int frame)
-    {
-        constexpr double pi = 3.1415926535897932;
-        double angle = ((double) frame / (double) m_nFrames) * pi;
-        double lengthX = (double) m_gridDX * (double) m_cellSize[0];
-        double radius = lengthX / angle;
-
-        // Animate frame as to bend the plane into a half-cylinder
-        for(int node_i = 0, p = 0; node_i <= m_cellSize[0]; node_i++){
-            double u = (double) node_i / (double) m_cellSize[0];
-            for(int node_j = 0; node_j <= m_cellSize[1]; node_j++)
-                m_particleX[p++] = GfVec3f{
-                    (float) (radius * std::sin( u * angle )),
-                    m_gridDX * (T)node_j,
-                    (float) (radius * (1.0 - std::cos( u * angle )))
-                };
-        }        
-    }
-
-
-private:
-    inline int gridToParticleID(const int i, const int j) { return i * (m_cellSize[1]+1) + j; }
-};
-
 int main(int argc, char *argv[])
 {
-    LatticeMesh<float> simulationMesh;
-    simulationMesh.m_cellSize = { 40, 40 };
-    simulationMesh.m_gridDX = 0.025;
-    simulationMesh.m_nFrames = 50;
+    AnimatedMesh<float, 4> simulationMesh;
 
-    // Initialize the simulation example
-    simulationMesh.initialize();
-    
+    // Initialize USD data structures
+    simulationMesh.initializeUSD("quadFacedCube.usda");
+
+    // Initialize the topology
+    simulationMesh.m_meshElements.emplace_back(std::array<int, 4>{0, 1, 3, 2});
+    simulationMesh.m_meshElements.emplace_back(std::array<int, 4>{4, 6, 7, 5});
+    simulationMesh.m_meshElements.emplace_back(std::array<int, 4>{0, 4, 5, 1});
+    simulationMesh.m_meshElements.emplace_back(std::array<int, 4>{2, 3, 7, 6});
+    simulationMesh.m_meshElements.emplace_back(std::array<int, 4>{1, 5, 7, 3});
+    simulationMesh.m_meshElements.emplace_back(std::array<int, 4>{0, 2, 6, 4});   
+    simulationMesh.initializeTopology();
+
+    // Then, initialize the particles
+    for(int i = 0; i <= 1; i++)
+    for(int j = 0; j <= 1; j++)
+    for(int k = 0; k <= 1; k++)
+        simulationMesh.m_particleX.emplace_back((float)i,(float)j,(float)k);
+    simulationMesh.initializeParticles();
+
     // Output the initial shape of the mesh
     simulationMesh.writeFrame(0);
 
     // Perform the animation, output results at each frame
-    for(int frame = 1; frame <= simulationMesh.m_nFrames; frame++){
-        simulationMesh.prepareFrame(frame);
+    for(int frame = 1; frame <= 20; frame++){
+        for(auto& vertex: simulationMesh.m_particleX)
+            vertex += GfVec3f(0.03125,.0625,.125);
         simulationMesh.writeFrame(frame);
     }
 
