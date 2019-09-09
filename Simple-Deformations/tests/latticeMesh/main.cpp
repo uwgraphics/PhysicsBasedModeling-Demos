@@ -15,26 +15,29 @@
 PXR_NAMESPACE_USING_DIRECTIVE
 
 template<class T, int d> // d is the dimension of the mesh elements, e.g. 3 for triangles, 4 for quads
-struct LatticeMesh
+struct AnimatedMesh
 {
     SdfLayerRefPtr m_layer;
     UsdStageRefPtr m_stage;
     UsdGeomMesh m_mesh;
+    UsdAttribute m_pointsAttribute;
+
     GfRange3f m_extent;
-    int m_nFrames;
+    int m_lastFrame;
     
     std::vector<std::array<int, d>> m_meshElements;
+    std::vector<GfVec3f> m_particleX;
 
 public:
 
-    LatticeMesh()
-        :m_nFrames(-1)
+    AnimatedMesh()
+        :m_lastFrame(-1)
     {}
     
-    void initializeUSD()
+    void initializeUSD(const std::string filename)
     {
         // Create the layer to populate.
-        m_layer = SdfLayer::CreateNew("latticeMesh.usda");
+        m_layer = SdfLayer::CreateNew(filename);
 
         // Create a UsdStage with that root layer.
         m_stage = UsdStage::Open(m_layer);
@@ -58,11 +61,43 @@ public:
         m_mesh.GetFaceVertexIndicesAttr().Set(faceVertexIndices);
     }
 
+    void initializeParticles()
+    {
+        // Grab the points (Positions) attribute, and indicate it is time-varying
+        m_pointsAttribute = m_mesh.GetPointsAttr();
+        m_pointsAttribute.SetVariability(SdfVariabilityVarying);
+    }
+
+    void writeFrame(const int frame)
+    {
+        std::cout << "Writing frame " << frame << " ..." << std::endl;
+        
+        // Check that there are any particles to write at all
+        if (m_particleX.empty())
+            throw std::logic_error("Empty array of input vertices");
+
+        // Check that frames have been written in sequence
+        if(frame != m_lastFrame+1)
+            throw std::logic_error("Non-consequtive frame sequence requested in writeFrame()");
+        m_lastFrame = frame;
+
+        // Update extent
+        for (const auto& pt : m_particleX)
+            m_extent.UnionWith(pt);
+
+        // Copy particleX into VtVec3fArray for Usd
+        VtVec3fArray usdPoints;
+        usdPoints.assign(m_particleX.begin(), m_particleX.end());
+        
+        // Write the points attribute for the given frame
+        m_pointsAttribute.Set(usdPoints, (double) frame);
+    }
+    
     void writeUSD()
     {
         // Set up the timecode
         m_stage->SetStartTimeCode(0.);
-        m_stage->SetEndTimeCode((double) m_nFrames);
+        m_stage->SetEndTimeCode((double) m_lastFrame);
 
         // Set the effective extent
         VtVec3fArray extentArray(2);
@@ -78,66 +113,39 @@ public:
 
 int main(int argc, char *argv[])
 {
-    LatticeMesh<float, 4> latticeMesh;
+    AnimatedMesh<float, 4> simulationMesh;
 
     // Initialize USD data structures
-    latticeMesh.initializeUSD();
+    simulationMesh.initializeUSD("SimulationOutput.usda");
 
     // Initialize the topology
-    latticeMesh.m_meshElements.emplace_back(std::array<int, 4>{0, 1, 3, 2});
-    latticeMesh.m_meshElements.emplace_back(std::array<int, 4>{4, 6, 7, 5});
-    latticeMesh.m_meshElements.emplace_back(std::array<int, 4>{0, 4, 5, 1});
-    latticeMesh.m_meshElements.emplace_back(std::array<int, 4>{2, 3, 7, 6});
-    latticeMesh.m_meshElements.emplace_back(std::array<int, 4>{1, 5, 7, 3});
-    latticeMesh.m_meshElements.emplace_back(std::array<int, 4>{0, 2, 6, 4});   
-    latticeMesh.initializeTopology();
+    simulationMesh.m_meshElements.emplace_back(std::array<int, 4>{0, 1, 3, 2});
+    simulationMesh.m_meshElements.emplace_back(std::array<int, 4>{4, 6, 7, 5});
+    simulationMesh.m_meshElements.emplace_back(std::array<int, 4>{0, 4, 5, 1});
+    simulationMesh.m_meshElements.emplace_back(std::array<int, 4>{2, 3, 7, 6});
+    simulationMesh.m_meshElements.emplace_back(std::array<int, 4>{1, 5, 7, 3});
+    simulationMesh.m_meshElements.emplace_back(std::array<int, 4>{0, 2, 6, 4});   
+    simulationMesh.initializeTopology();
 
-    // Now we'll populate the stage with content from the objStream.
-    std::vector<GfVec3f> particleX;
+    // Then, initialize the particles
     for(int i = 0; i <= 1; i++)
     for(int j = 0; j <= 1; j++)
     for(int k = 0; k <= 1; k++)
-        particleX.emplace_back((float)i,(float)j,(float)k);
+        simulationMesh.m_particleX.emplace_back((float)i,(float)j,(float)k);
+    simulationMesh.initializeParticles();
 
-    std::cout << "particleX.size() = " << particleX.size() << std::endl;
+    // Output the initial shape of the mesh
+    simulationMesh.writeFrame(0);
 
-    if (particleX.empty())
-        throw std::logic_error("Empty array of input vertices");
-
-    // Copy particleX into VtVec3fArray for Usd.
-    VtVec3fArray usdPoints;
-    usdPoints.assign(particleX.begin(), particleX.end());
-
-    // Usd currently requires an extent, somewhat unfortunately.
-    latticeMesh.m_nFrames = 20;
-    for (const auto& pt : usdPoints) {
-        latticeMesh.m_extent.UnionWith(pt);
-    }
-    // VtVec3fArray extentArray(2);
-    // extentArray[0] = latticeMesh.m_extent.GetMin();
-    // extentArray[1] = latticeMesh.m_extent.GetMax() + GfVec3f(0.03125,.0625,.125) * (float) latticeMesh.m_nFrames;
-
-    // Populate the mesh vertex data
-    UsdAttribute pointsAttribute = latticeMesh.m_mesh.GetPointsAttr();
-    pointsAttribute.SetVariability(SdfVariabilityVarying);
-
-    std::vector<double> timeSamples;
-    timeSamples.push_back(0.);
-    for(int frame = 1; frame <= latticeMesh.m_nFrames; frame++)
-        timeSamples.push_back((double)frame);
-    for(const auto sample: timeSamples){
-        pointsAttribute.Set(usdPoints, sample);
-        for(auto& vertex: particleX){
+    // Perform the animation, output results at each frame
+    for(int frame = 1; frame <= 20; frame++){
+        for(auto& vertex: simulationMesh.m_particleX)
             vertex += GfVec3f(0.03125,.0625,.125);
-            latticeMesh.m_extent.UnionWith(vertex);
-        }
-        usdPoints.assign(particleX.begin(), particleX.end());
+        simulationMesh.writeFrame(frame);
     }
 
-    // Set extent.
-    // latticeMesh.m_mesh.GetExtentAttr().Set(extentArray);
-
-    latticeMesh.writeUSD();
+    // Write the entire timeline to USD
+    simulationMesh.writeUSD();
 
     return 0;
 }
