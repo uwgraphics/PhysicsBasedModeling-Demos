@@ -123,13 +123,13 @@ struct LatticeMesh : public AnimatedMesh<T, 4>
     std::array<int, 2> m_cellSize; // dimensions in grid cells
     T m_gridDX;
     int m_nFrames;
+    int m_subSteps;
+    T m_frameDt;
 
     static constexpr int m_pinchRadius = 1;
     static constexpr T m_particleMass = 1.0;
-    static constexpr int m_subSteps = 10;
     static constexpr T m_stiffnessCoeff = 1.0;
     static constexpr T m_dampingCoeff = 0.2;
-    static constexpr T m_frameDt = 0.1;
 
     std::vector<GfVec3f> m_particleV;
 
@@ -220,9 +220,9 @@ struct LatticeMesh : public AnimatedMesh<T, 4>
 
         addForce(force);
         for(int p = 0; p < nParticles; p++)
-            m_particleV[p] += (dt / m_particleMass) * force[p];
-        for(int p = 0; p < nParticles; p++)
             m_particleX[p] += dt * m_particleV[p];
+        for(int p = 0; p < nParticles; p++)
+            m_particleV[p] += (dt / m_particleMass) * force[p];
     }
 
     void simulateFrame(const int frame)
@@ -243,6 +243,8 @@ int main(int argc, char *argv[])
     simulationMesh.m_cellSize = { 40, 40 };
     simulationMesh.m_gridDX = 0.025;
     simulationMesh.m_nFrames = 400;
+    simulationMesh.m_subSteps = 10;
+    simulationMesh.m_frameDt = 0.1;
 
     // Initialize the simulation example
     simulationMesh.initialize();
