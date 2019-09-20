@@ -136,18 +136,19 @@ struct LatticeMesh : public AnimatedMesh<T, 3>
     const T m_particleMass;
     const T m_mu;
     const T m_lambda;
+    const T m_rayleighCoefficient;
     
     std::vector<Vector2> m_particleV;
     std::vector<Matrix22> m_DmInverse;
     std::vector<T> m_restVolume;
     
     LatticeMesh()
-        :m_pinchRadius(1), m_particleMass(1.0), m_mu(1.0), m_lambda(1.0)
+        :m_pinchRadius(1), m_particleMass(1.0), m_mu(1.0), m_lambda(1.0), m_rayleighCoefficient(0.1)
     {}
 
     void initialize()
     {
-        initializeUSD("MembranePinch1.usda");
+        initializeUSD("MembranePinch2.usda");
 
         // Create a Cartesian lattice topology
         for(int cell_i = 0; cell_i < m_cellSize[0]; cell_i++)
@@ -259,6 +260,22 @@ struct LatticeMesh : public AnimatedMesh<T, 3>
                 f[element[j+1]] += H.col(j);
                 f[element[0]] -= H.col(j);
             }
+
+            // Linear Damping
+            Matrix22 Ds_dot;
+            for(int j = 0; j < 2; j++)
+                Ds_dot.col(j) = m_particleV[element[j+1]]-m_particleV[element[0]];
+            Matrix22 F_dot = Ds_dot * m_DmInverse[e];
+
+            Matrix22 strain_rate = .5 * (F_dot + F_dot.transpose());
+            Matrix22 P_damping = m_rayleighCoefficient * (2. * m_mu * strain_rate + m_lambda * strain_rate.trace() * Matrix22::Identity());
+
+            Matrix22 H_damping = -m_restVolume[e] * P_damping * m_DmInverse[e].transpose();
+            
+            for(int j = 0; j < 2; j++){
+                f[element[j+1]] += H_damping.col(j);
+                f[element[0]] -= H_damping.col(j);
+            }
         }
 
         for(int node_i = 0; node_i <= m_cellSize[0]; node_i++)
@@ -297,7 +314,7 @@ int main(int argc, char *argv[])
     LatticeMesh<float> simulationMesh;
     simulationMesh.m_cellSize = { 40, 40 };
     simulationMesh.m_gridDX = 0.025;
-    simulationMesh.m_nFrames = 50;
+    simulationMesh.m_nFrames = 400;
     simulationMesh.m_subSteps = 10;
     simulationMesh.m_frameDt = 0.1;
 
