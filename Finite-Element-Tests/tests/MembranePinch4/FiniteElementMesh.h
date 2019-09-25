@@ -39,7 +39,7 @@ struct FiniteElementMesh : public AnimatedMesh<T, 3>
         {
             Matrix22 Dm;
             for(int j = 0; j < 2; j++)
-                Dm.col(j) = m_particleV[element[j+1]]-m_particleV[element[0]];
+                Dm.col(j) = m_particleX[element[j+1]]-m_particleX[element[0]];
             T restVolume = .5 * Dm.determinant();
             if(restVolume < 0)
                 throw std::logic_error("Inverted element");
