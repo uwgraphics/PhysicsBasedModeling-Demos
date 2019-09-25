@@ -133,18 +133,18 @@ struct LatticeMesh : public AnimatedMesh<T, 3>
     T m_frameDt;
 
     const int m_pinchRadius;
-    const T m_particleDensity;
+    const T m_density;
     const T m_mu;
     const T m_lambda;
     const T m_rayleighCoefficient;
     
-    std::vector<T> m_particleM;
+    std::vector<T> m_particleMass;
     std::vector<Vector2> m_particleV;
     std::vector<Matrix22> m_DmInverse;
     std::vector<T> m_restVolume;
     
     LatticeMesh()
-        :m_pinchRadius(1), m_particleDensity(1.e3), m_mu(1.0), m_lambda(1.0), m_rayleighCoefficient(0.1)
+        :m_pinchRadius(1), m_density(1.e3), m_mu(1.0), m_lambda(1.0), m_rayleighCoefficient(0.1)
     {}
 
     void initialize()
@@ -187,7 +187,7 @@ struct LatticeMesh : public AnimatedMesh<T, 3>
         m_particleV.resize(m_particleX.size(), Vector2::Zero());
 
         // Initialize rest shape and particle mass (based on constant density)
-        m_particleM.resize(m_particleX.size(), T()); // Initialize all particle masses to zero
+        m_particleMass.resize(m_particleX.size(), T()); // Initialize all particle masses to zero
         for(const auto& element: m_meshElements)
         {
             Matrix22 Dm;
@@ -198,9 +198,9 @@ struct LatticeMesh : public AnimatedMesh<T, 3>
                 throw std::logic_error("Inverted element");
             m_DmInverse.emplace_back(Dm.inverse());
             m_restVolume.push_back(restVolume);
-            T elementMass = m_particleDensity * restVolume;
+            T elementMass = m_density * restVolume;
             for(const int v: element)
-                m_particleM[v] += (1./3.) * elementMass;
+                m_particleMass[v] += (1./3.) * elementMass;
         }
 
     }
@@ -293,7 +293,7 @@ struct LatticeMesh : public AnimatedMesh<T, 3>
         for(int p = 0; p < nParticles; p++)
             m_particleX[p] += dt * m_particleV[p];
         for(int p = 0; p < nParticles; p++)
-            m_particleV[p] += (dt / m_particleM[p]) * force[p];
+            m_particleV[p] += (dt / m_particleMass[p]) * force[p];
     }
 
     void simulateFrame(const int frame)
