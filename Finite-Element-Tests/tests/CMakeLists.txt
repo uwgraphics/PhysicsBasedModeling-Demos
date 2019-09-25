@@ -1,3 +1,4 @@
 add_subdirectory(MembranePinch1)
 add_subdirectory(MembranePinch2)
 add_subdirectory(MembranePinch3)
+add_subdirectory(MembranePinch4)
