@@ -95,7 +95,7 @@ struct FiniteElementMesh : public AnimatedMesh<T, 3>
             Matrix22 strain_rate = .5 * (F_dot + F_dot.transpose());
             Matrix22 P_damping = scale * (2. * m_mu * strain_rate + m_lambda * strain_rate.trace() * Matrix22::Identity());
 
-            Matrix22 H_damping = -m_restVolume[e] * P_damping * m_DmInverse[e].transpose();
+            Matrix22 H_damping = m_restVolume[e] * P_damping * m_DmInverse[e].transpose();
             
             for(int j = 0; j < 2; j++){
                 f[element[j+1]] += H_damping.col(j);
@@ -109,30 +109,37 @@ struct FiniteElementMesh : public AnimatedMesh<T, 3>
         using FEMType = FiniteElementMesh<T>;
         
         const int nParticles = m_particleX.size();
-        std::vector<Vector2> force(nParticles, Vector2::Zero());
 
-        std::vector<Vector2> x(nParticles, Vector2::Zero());
-        std::vector<Vector2> b(nParticles, Vector2::Zero());
+        std::vector<Vector2> dx(nParticles, Vector2::Zero());
+        std::vector<Vector2> rhs(nParticles, Vector2::Zero());
         std::vector<Vector2> q(nParticles, Vector2::Zero());
         std::vector<Vector2> s(nParticles, Vector2::Zero());
         std::vector<Vector2> r(nParticles, Vector2::Zero());
-        CGVectorWrapper<Vector2> xWrapper(x);
-        CGVectorWrapper<Vector2> bWrapper(b);
+        CGVectorWrapper<Vector2> dxWrapper(dx);
+        CGVectorWrapper<Vector2> rhsWrapper(rhs);
         CGVectorWrapper<Vector2> qWrapper(q);
         CGVectorWrapper<Vector2> sWrapper(s);
         CGVectorWrapper<Vector2> rWrapper(r);
         CGSystemWrapper<Vector2, FEMType> systemWrapper(*this);
         
-        // ConjugateGradient<T>::Solve(systemWrapper,
-        //     xWrapper, bWrapper, qWrapper, sWrapper, rWrapper,
-        //     1e-3, 50);
+        addElasticForce(rhs);
+        for(int p = 0; p < nParticles; p++)
+            rhs[p] += (m_particleMass[p] / m_stepDt) * m_particleV[p];
+        
+        ConjugateGradient<T>::Solve(systemWrapper,
+            dxWrapper, rhsWrapper, qWrapper, sWrapper, rWrapper,
+            1e-4, 50);
 
-        addElasticForce(force);
-        addProductWithStiffnessMatrix(m_particleV, force, m_rayleighCoefficient);
-        for(int p = 0; p < nParticles; p++)
-            m_particleX[p] += m_stepDt * m_particleV[p];
-        for(int p = 0; p < nParticles; p++)
-            m_particleV[p] += (m_stepDt / m_particleMass[p]) * force[p];
+        const T oneOverDt = T(1.) / m_stepDt;
+        for(int p = 0; p < nParticles; p++){
+            m_particleX[p] += dx[p];
+            m_particleV[p] = oneOverDt * dx[p];
+        }
+//        addProductWithStiffnessMatrix(m_particleV, force, -m_rayleighCoefficient);
+//        for(int p = 0; p < nParticles; p++)
+//            m_particleX[p] += m_stepDt * m_particleV[p];
+//        for(int p = 0; p < nParticles; p++)
+//            m_particleV[p] += (m_stepDt / m_particleMass[p]) * force[p];
     }
 
     void simulateFrame(const int frame)

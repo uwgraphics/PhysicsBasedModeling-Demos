@@ -108,9 +108,9 @@ int main(int argc, char *argv[])
     LatticeMesh<float> simulationMesh;
     simulationMesh.m_cellSize = { 40, 40 };
     simulationMesh.m_gridDX = 0.025;
-    simulationMesh.m_nFrames = 50;
-    simulationMesh.m_subSteps = 10;
-    simulationMesh.m_frameDt = 0.1;
+    simulationMesh.m_nFrames = 100;
+    simulationMesh.m_subSteps = 1;
+    simulationMesh.m_frameDt = 0.5;
 
     // Initialize the simulation example
     simulationMesh.initialize();

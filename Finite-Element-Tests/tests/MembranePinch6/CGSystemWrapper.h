@@ -16,7 +16,15 @@ struct CGSystemWrapper
 
     void Multiply(const VectorWrapper& x, VectorWrapper& y) const
     {
-        throw std::logic_error("not implemented");
+        const T oneOverDtSquared = T(1.) / (m_finiteElements.m_stepDt * m_finiteElements.m_stepDt);
+
+        for(int i = 0; i < x.m_data.size(); i++)
+            y.m_data[i] = m_finiteElements.m_particleMass[i] * oneOverDtSquared * x.m_data[i];
+        m_finiteElements.addProductWithStiffnessMatrix(
+            x.m_data,
+            y.m_data,
+            T(1.) + m_finiteElements.m_rayleighCoefficient / m_finiteElements.m_stepDt
+        );
     }
 
     T Convergence_Norm(const VectorWrapper& x) const
