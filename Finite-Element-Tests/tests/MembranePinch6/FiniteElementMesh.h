@@ -2,6 +2,10 @@
 
 #include "AnimatedMesh.h"
 
+#include "CGVectorWrapper.h"
+#include "CGSystemWrapper.h"
+#include "ConjugateGradient.h"
+
 #include <Eigen/Dense>
 
 template<class T>
@@ -51,7 +55,7 @@ struct FiniteElementMesh : public AnimatedMesh<T, 3>
         }
     }
     
-    void addForce(std::vector<Vector2>& f) const
+    void addElasticForce(std::vector<Vector2>& f) const
     {
         for(int e = 0; e < m_meshElements.size(); e++)
         {
@@ -72,15 +76,23 @@ struct FiniteElementMesh : public AnimatedMesh<T, 3>
                 f[element[j+1]] += H.col(j);
                 f[element[0]] -= H.col(j);
             }
+        }
+    }
+
+    void addProductWithStiffnessMatrix(std::vector<Vector2>& w, std::vector<Vector2>& f, const T scale) const
+    {
+        for(int e = 0; e < m_meshElements.size(); e++)
+        {
+            const auto& element = m_meshElements[e];
 
             // Linear Damping
             Matrix22 Ds_dot;
             for(int j = 0; j < 2; j++)
-                Ds_dot.col(j) = m_particleV[element[j+1]]-m_particleV[element[0]];
+                Ds_dot.col(j) = w[element[j+1]]-w[element[0]];
             Matrix22 F_dot = Ds_dot * m_DmInverse[e];
 
             Matrix22 strain_rate = .5 * (F_dot + F_dot.transpose());
-            Matrix22 P_damping = m_rayleighCoefficient * (2. * m_mu * strain_rate + m_lambda * strain_rate.trace() * Matrix22::Identity());
+            Matrix22 P_damping = scale * (2. * m_mu * strain_rate + m_lambda * strain_rate.trace() * Matrix22::Identity());
 
             Matrix22 H_damping = -m_restVolume[e] * P_damping * m_DmInverse[e].transpose();
             
@@ -98,7 +110,24 @@ struct FiniteElementMesh : public AnimatedMesh<T, 3>
         const int nParticles = m_particleX.size();
         std::vector<Vector2> force(nParticles, Vector2::Zero());
 
-        addForce(force);
+        std::vector<Vector2> x(nParticles, Vector2::Zero());
+        std::vector<Vector2> b(nParticles, Vector2::Zero());
+        std::vector<Vector2> q(nParticles, Vector2::Zero());
+        std::vector<Vector2> s(nParticles, Vector2::Zero());
+        std::vector<Vector2> r(nParticles, Vector2::Zero());
+        CGVectorWrapper<Vector2> xWrapper(x);
+        CGVectorWrapper<Vector2> bWrapper(b);
+        CGVectorWrapper<Vector2> qWrapper(q);
+        CGVectorWrapper<Vector2> sWrapper(s);
+        CGVectorWrapper<Vector2> rWrapper(r);
+        CGSystemWrapper<Vector2, FEMType> systemWrapper(*this);
+        
+        // ConjugateGradient<T>::Solve(systemWrapper,
+        //     xWrapper, bWrapper, qWrapper, sWrapper, rWrapper,
+        //     1e-3, 50);
+
+        addElasticForce(force);
+        addProductWithStiffnessMatrix(m_particleV, force, m_rayleighCoefficient);
         for(int p = 0; p < nParticles; p++)
             m_particleX[p] += dt * m_particleV[p];
         for(int p = 0; p < nParticles; p++)
