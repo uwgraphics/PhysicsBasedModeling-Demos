@@ -20,7 +20,8 @@ struct FiniteElementMesh : public AnimatedMesh<T, 3>
     int m_nFrames;
     int m_subSteps;
     T m_frameDt;
-
+    T m_stepDt;
+    
     const T m_density;
     const T m_mu;
     const T m_lambda;
@@ -103,7 +104,7 @@ struct FiniteElementMesh : public AnimatedMesh<T, 3>
         }
     }
 
-    void simulateSubstep(const T dt)
+    void simulateSubstep()
     {
         using FEMType = FiniteElementMesh<T>;
         
@@ -129,17 +130,17 @@ struct FiniteElementMesh : public AnimatedMesh<T, 3>
         addElasticForce(force);
         addProductWithStiffnessMatrix(m_particleV, force, m_rayleighCoefficient);
         for(int p = 0; p < nParticles; p++)
-            m_particleX[p] += dt * m_particleV[p];
+            m_particleX[p] += m_stepDt * m_particleV[p];
         for(int p = 0; p < nParticles; p++)
-            m_particleV[p] += (dt / m_particleMass[p]) * force[p];
+            m_particleV[p] += (m_stepDt / m_particleMass[p]) * force[p];
     }
 
     void simulateFrame(const int frame)
     {
-        T stepDt = m_frameDt / (T) m_subSteps;
+        m_stepDt = m_frameDt / (T) m_subSteps;
 
         for(int step = 1; step <= m_subSteps; step++)
-            simulateSubstep(stepDt);
+            simulateSubstep();
     }
 };
 
