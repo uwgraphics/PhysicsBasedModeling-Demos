@@ -23,7 +23,7 @@ struct CGVectorWrapper
     }
 
     // replaces current vector with c * x + y
-    void Copy(const T c, const CGVectorWrapper& x, const CGVectorWrapper& y)
+    void Saxpy(const T c, const CGVectorWrapper& x, const CGVectorWrapper& y)
     {
         for(int i = 0; i < m_data.size(); i++)
             m_data[i] = c * x.m_data[i] + y.m_data[i];
