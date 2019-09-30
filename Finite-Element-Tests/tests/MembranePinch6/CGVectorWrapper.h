@@ -13,13 +13,15 @@ struct CGVectorWrapper
 
     CGVectorWrapper& operator = (const CGVectorWrapper& v)
     {
-        m_data = v.m_data; return *this;
+        m_data = v.m_data;
+        return *this;
     }
 
     CGVectorWrapper& operator -= (const CGVectorWrapper& v)
     {
         for(int i = 0; i < m_data.size(); i++)
             m_data[i] -= v.m_data[i];
+        return *this;
     }
 
     // replaces current vector with c * x + y
