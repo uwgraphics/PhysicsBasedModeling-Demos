@@ -2,15 +2,12 @@ add_executable (latticeMeshElasticityTest4
         main.cpp
         )
 
-find_package(PythonLibs)
-
 set(EIGEN3_INC_DIR /usr/include/eigen3)
 
 target_include_directories(latticeMeshElasticityTest4
         PUBLIC
             ${USD_INC_DIR}
             ${EIGEN3_INC_DIR}
-            ${PYTHON_INCLUDE_PATH}
         )
 
 target_link_libraries(
@@ -21,6 +18,4 @@ target_link_libraries(
                 ${USD_LIB_DIR}/libusd.so
                 ${USD_LIB_DIR}/libusdGeom.so
                 ${USD_LIB_DIR}/libvt.so
-                ${USD_LIB_DIR}/libboost_python.so # todo find library
-                ${PYTHON_LIBRARY}
         )
