@@ -33,8 +33,8 @@ struct LatticeMesh : public FiniteElementMesh<T>
     LatticeMesh()
         :Base(1.e2, 1., 4., .05), m_pinchRadius(1)
     {
-        m_leftHandleDisplacement  = Vector2(-.5, 0.);
-        m_rightHandleDisplacement = Vector2(-.5, 0.);
+        m_leftHandleDisplacement  = Vector2(-.2, 0.);
+        m_rightHandleDisplacement = Vector2( .2, 0.);
     }
 
     void initialize()
@@ -120,9 +120,9 @@ int main(int argc, char *argv[])
     LatticeMesh<float> simulationMesh;
     simulationMesh.m_cellSize = { 40, 40 };
     simulationMesh.m_gridDX = 0.05;
-    simulationMesh.m_nFrames = 10;
+    simulationMesh.m_nFrames = 30;
     simulationMesh.m_subSteps = 1;
-    simulationMesh.m_frameDt = 1.0;
+    simulationMesh.m_frameDt = 0.1;
 
     // Initialize the simulation example
     simulationMesh.initialize();
