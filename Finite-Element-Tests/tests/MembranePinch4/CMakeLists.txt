@@ -2,14 +2,14 @@ add_executable (MembranePinch4
         main.cpp
         )
 
-find_package(PythonLibs)
-
-set(EIGEN3_INC_DIR /usr/include/eigen3)
+# if CMake cannot use find_package for Eigen, use the explicit include path instead
+find_package(Eigen3)
+# set(EIGEN3_INCLUDE_DIRS /usr/include/eigen3/)
 
 target_include_directories(MembranePinch4
         PUBLIC
             ${USD_INC_DIR}
-            ${EIGEN3_INC_DIR}
+            ${EIGEN3_INCLUDE_DIRS}
             ${PYTHON_INCLUDE_PATH}
         )
 
@@ -21,6 +21,4 @@ target_link_libraries(
                 ${USD_LIB_DIR}/libusd.so
                 ${USD_LIB_DIR}/libusdGeom.so
                 ${USD_LIB_DIR}/libvt.so
-                ${USD_LIB_DIR}/libboost_python.so # todo find library
-                ${PYTHON_LIBRARY}
         )

@@ -1,4 +1,4 @@
-add_executable (MembranePinch1
+add_executable (MembraneStretch3
         main.cpp
         )
 
@@ -6,7 +6,7 @@ add_executable (MembranePinch1
 find_package(Eigen3)
 # set(EIGEN3_INCLUDE_DIRS /usr/include/eigen3/)
 
-target_include_directories(MembranePinch1
+target_include_directories(MembraneStretch3
         PUBLIC
             ${USD_INC_DIR}
             ${EIGEN3_INCLUDE_DIRS}
@@ -14,7 +14,7 @@ target_include_directories(MembranePinch1
         )
 
 target_link_libraries(
-        MembranePinch1
+        MembraneStretch3
                 ${USD_LIB_DIR}/libgf.so
                 ${USD_LIB_DIR}/libsdf.so
                 ${USD_LIB_DIR}/libtf.so
