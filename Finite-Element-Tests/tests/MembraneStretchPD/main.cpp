@@ -87,7 +87,7 @@ struct LatticeMesh : public FiniteElementMesh<T>
         }
     }
 
-    void initializeDeformation()
+    void applyPerturbation()
     {
         std::random_device rd;  //Will be used to obtain a seed for the random number engine
         std::mt19937 gen(rd()); //Standard mersenne_twister_engine seeded with rd()
@@ -133,7 +133,6 @@ int main(int argc, char *argv[])
 
     // Initialize the simulation example
     simulationMesh.initialize();
-    //simulationMesh.initializeDeformation();
 
     // Output the initial shape of the mesh
     simulationMesh.writeFrame(0);
@@ -142,7 +141,7 @@ int main(int argc, char *argv[])
     for(int frame = 1; frame <= simulationMesh.m_nFrames; frame++){
         simulationMesh.simulateFrame(frame);
         if (frame%8 == 0)
-            simulationMesh.initializeDeformation();
+            simulationMesh.applyPerturbation();
         simulationMesh.writeFrame(frame);
     }
 
