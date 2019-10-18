@@ -38,7 +38,7 @@ struct FiniteElementMesh : public AnimatedMesh<T, 3>
     std::vector<T> m_restVolume;
     
     FiniteElementMesh(const T density, const T mu, const T lambda, const T rayleighCoefficient)
-        :m_density(density), m_mu(mu), m_lambda(lambda), m_rayleighCoefficient(rayleighCoefficient), m_singularValueThreshold(.2f)
+        :m_density(density), m_mu(mu), m_lambda(lambda), m_rayleighCoefficient(rayleighCoefficient), m_singularValueThreshold(-std::numeric_limits<T>::max())
     {}
 
     void initializeUndeformedConfiguration()
@@ -96,8 +96,6 @@ struct FiniteElementMesh : public AnimatedMesh<T, 3>
                     V.col(1) *= -1.f;
                     vSigma[1] = -vSigma[1];
                 }
-            if ( (F-U*vSigma.asDiagonal()*V.transpose()).norm() > 1e-5 )
-                throw std::logic_error("SVD error");
 
             // Apply thresholding of singular values, and re-constitute F
             for (int v = 0; v < 2; v++)
@@ -129,6 +127,12 @@ struct FiniteElementMesh : public AnimatedMesh<T, 3>
             }
         }
     }
+
+    struct DiagonalizedStressDerivative
+    {
+        Matrix22 A;
+        Matrix22 B12;
+    };
 
     void addProductWithStiffnessMatrix(std::vector<Vector2>& dx, std::vector<Vector2>& df, const T scale) const
     {
@@ -165,8 +169,6 @@ struct FiniteElementMesh : public AnimatedMesh<T, 3>
                     V.col(1) *= -1.f;
                     vSigma[1] = -vSigma[1];
                 }
-            if ( (F-U*vSigma.asDiagonal()*V.transpose()).norm() > 1e-5 )
-                throw std::logic_error("SVD error");
 
             // Apply thresholding of singular values, and re-constitute F
             for (int v = 0; v < 2; v++)
@@ -182,7 +184,7 @@ struct FiniteElementMesh : public AnimatedMesh<T, 3>
 
 #ifdef USE_LINEAR_ELASTICITY
             Matrix22 dstrain = .5 * (dF + dF.transpose());
-            Matrix22 dP = scale * (2. * m_mu * dstrain + m_lambda * dstrain.trace() * Matrix22::Identity());
+            Matrix22 dP = 2. * m_mu * dstrain + m_lambda * dstrain.trace() * Matrix22::Identity();
 #endif
 
 #ifdef USE_ST_VENANT_KIRCHHOFF
@@ -195,19 +197,19 @@ struct FiniteElementMesh : public AnimatedMesh<T, 3>
 
 #ifdef USE_COROTATED_ELASTICITY
             // Construct diagonalized dP/dF tensor
-            Matrix22 A, B12;
-            A(0, 0) = A(1, 1) = 2. * m_mu + m_lambda;
-            A(0, 1) = A(1, 0) = m_lambda;
+            DiagonalizedStressDerivative dsd;
+            dsd.A = Matrix22::Ones() * m_lambda + Matrix22::Identity() * (2. * m_mu);
+
             Vector2 vStrain = vSigma - Vector2::Ones();
-            T q = std::max<T>( m_lambda * vStrain.sum() - 2. * m_mu, 0. ); // Positive definiteness fix
-            B12(0, 0) = B12(1, 1) = m_mu + q;
-            B12(0, 1) = B12(1, 0) = m_mu - q;
+            T q = ( m_mu + m_lambda) * std::max<T>( vStrain.sum(), 0. ) / ( vSigma.sum() + 1e-4 ); // Definiteness fix
+            dsd.B12(0, 0) = dsd.B12(1, 1) = m_mu + q;
+            dsd.B12(0, 1) = dsd.B12(1, 0) = m_mu - q;
 
             // Apply tensor (with required rotations)
             Matrix22 dF_hat = U.transpose() * dF * V;
 
-            Vector2 vdP_A = A * Vector2( dF_hat(0, 0), dF_hat(1, 1) );
-            Vector2 vdP_B12 = B12 * Vector2( dF_hat(0, 1), dF_hat(1, 0) );
+            Vector2 vdP_A = dsd.A * Vector2( dF_hat(0, 0), dF_hat(1, 1) );
+            Vector2 vdP_B12 = dsd.B12 * Vector2( dF_hat(0, 1), dF_hat(1, 0) );
             Matrix22 dP_hat;
             dP_hat(0, 0) = vdP_A[0];
             dP_hat(1, 1) = vdP_A[1];
@@ -217,7 +219,7 @@ struct FiniteElementMesh : public AnimatedMesh<T, 3>
             Matrix22 dP = U * dP_hat * V.transpose();
 #endif
             
-            Matrix22 dH = m_restVolume[e] * dP * m_DmInverse[e].transpose();
+            Matrix22 dH = (scale * m_restVolume[e]) * dP * m_DmInverse[e].transpose();
             
             for(int j = 0; j < 2; j++){
                 df[element[j+1]] += dH.col(j);

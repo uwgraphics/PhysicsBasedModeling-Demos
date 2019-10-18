@@ -1,6 +1,7 @@
 #include "FiniteElementMesh.h"
 
 #include <Eigen/Dense>
+#include <random>
 
 template<class T>
 struct LatticeMesh : public FiniteElementMesh<T>
@@ -33,8 +34,8 @@ struct LatticeMesh : public FiniteElementMesh<T>
     LatticeMesh()
         :Base(1.e2, 1., 4., .05), m_pinchRadius(1)
     {
-        m_leftHandleDisplacement  = Vector2(-.2, 0.);
-        m_rightHandleDisplacement = Vector2( .2, 0.);
+        m_leftHandleDisplacement  = Vector2(-.5,  1.);
+        m_rightHandleDisplacement = Vector2( .5, -1.);
     }
 
     void initialize()
@@ -86,9 +87,15 @@ struct LatticeMesh : public FiniteElementMesh<T>
         }
     }
 
-    void initializeDeformation()
+    void applyPerturbation()
     {
-        // No need to apply any deformation; this example is driven by moving handles
+        std::random_device rd;  //Will be used to obtain a seed for the random number engine
+        std::mt19937 gen(rd()); //Standard mersenne_twister_engine seeded with rd()
+        std::uniform_real_distribution<> dis(-1.0, +1.0);
+
+        for (auto& X : m_particleX)
+            for (int d = 0; d < 2; d++)
+                X[d] += dis(gen);
     }
 
     void clearConstrainedParticles(std::vector<Vector2>& x) override
@@ -122,11 +129,10 @@ int main(int argc, char *argv[])
     simulationMesh.m_gridDX = 0.05;
     simulationMesh.m_nFrames = 30;
     simulationMesh.m_subSteps = 1;
-    simulationMesh.m_frameDt = 0.1;
+    simulationMesh.m_frameDt = 1.0;
 
     // Initialize the simulation example
     simulationMesh.initialize();
-    simulationMesh.initializeDeformation();
 
     // Output the initial shape of the mesh
     simulationMesh.writeFrame(0);
@@ -134,6 +140,8 @@ int main(int argc, char *argv[])
     // Perform the animation, output results at each frame
     for(int frame = 1; frame <= simulationMesh.m_nFrames; frame++){
         simulationMesh.simulateFrame(frame);
+        if (frame == 7)
+            simulationMesh.applyPerturbation();
         simulationMesh.writeFrame(frame);
     }
 
