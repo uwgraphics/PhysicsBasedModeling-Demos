@@ -38,8 +38,14 @@ struct FiniteElementMesh : public AnimatedMesh<T, 3>
     std::vector<Matrix22> m_DmInverse;
     std::vector<T> m_restVolume;
     
+    std::vector<int> m_surfaceParticles;
+    mutable std::vector<bool> m_collisionActive;
+    mutable std::vector<Vector2> m_collisionTarget;
+    T m_collisionStiffness;
+
     FiniteElementMesh(const T density, const T mu, const T lambda, const T rayleighCoefficient)
-        :m_density(density), m_mu(mu), m_lambda(lambda), m_rayleighCoefficient(rayleighCoefficient), m_singularValueThreshold(-std::numeric_limits<T>::max())
+        :m_density(density), m_mu(mu), m_lambda(lambda), m_rayleighCoefficient(rayleighCoefficient), m_singularValueThreshold(-std::numeric_limits<T>::max()),
+        m_collisionStiffness(2.e1)
     {}
 
     void initializeUndeformedConfiguration()
@@ -127,6 +133,32 @@ struct FiniteElementMesh : public AnimatedMesh<T, 3>
                 f[element[0]] -= H.col(j);
             }
         }
+
+        // Detect collisions
+
+        const T groundHeight = -1.;
+        
+        m_collisionActive.resize( m_particleX.size() );
+        for(auto b : m_collisionActive) b = false;
+        m_collisionTarget.resize( m_particleX.size() );
+
+
+        for (const int p: m_surfaceParticles) {
+            T phi = m_particleX[p][1] - groundHeight;
+            if (phi < 0) {
+                m_collisionActive[p] = true;
+                m_collisionTarget[p] = Vector2( m_particleX[p][0], groundHeight );
+            }
+            else m_collisionActive[p] = false;
+        }
+
+        // Apply collision force
+
+        for (int p = 0; p < m_particleX.size(); p++)
+            if ( m_collisionActive[p] ) {
+                Vector2 collisionDX = m_particleX[p] - m_collisionTarget[p];
+                f[p] -= m_collisionStiffness * collisionDX;
+            }
     }
 
     struct DiagonalizedStressDerivative
@@ -227,6 +259,14 @@ struct FiniteElementMesh : public AnimatedMesh<T, 3>
                 df[element[0]] -= dH.col(j);
             }
         }
+
+        // Apply collision force differential
+
+        for (int p = 0; p < m_particleX.size(); p++)
+            if ( m_collisionActive[p] ) {
+                Vector2 collisionDX = m_particleX[p] - m_collisionTarget[p];
+                df[p] += scale * m_collisionStiffness * dx[p];
+            }
     }
 
     void simulateSubstep()

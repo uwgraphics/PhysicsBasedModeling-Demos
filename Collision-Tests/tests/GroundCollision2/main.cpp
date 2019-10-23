@@ -17,6 +17,7 @@ struct LatticeMesh : public FiniteElementMesh<T>
     using Vector2 = typename Base::Vector2;
 
     // from FiniteElementMesh
+    using Base::m_surfaceParticles;
     using Base::m_particleV;
     using Base::m_particleMass;
     using Base::initializeUndeformedConfiguration;
@@ -34,7 +35,7 @@ struct LatticeMesh : public FiniteElementMesh<T>
     Vector2 m_rightHandleVelocity;
     
     LatticeMesh()
-        :Base(1.e0, 5., 4., .05), m_pinchRadius(1)
+        :Base(1.e0, 5.e1, 2.e2, .002), m_pinchRadius(1)
     {
         // m_leftHandleVelocity  = Vector2(-.2, 0.);
         // m_rightHandleVelocity = Vector2( .2, 0.);
@@ -44,7 +45,7 @@ struct LatticeMesh : public FiniteElementMesh<T>
 
     void initialize()
     {
-        initializeUSD("GroundCollision1.usda");
+        initializeUSD("GroundCollision2.usda");
 
         // Create a Cartesian lattice topology
         for(int cell_i = 0; cell_i < m_cellSize[0]; cell_i++)
@@ -72,6 +73,13 @@ struct LatticeMesh : public FiniteElementMesh<T>
             m_particleX.emplace_back(m_gridDX * (T)node_i, m_gridDX * (T)node_j);
         initializeParticles();
 
+        // Detect surface particles (for collisions)
+        for(int node_i = 0; node_i <= m_cellSize[0]; node_i++)
+        for(int node_j = 0; node_j <= m_cellSize[1]; node_j++)
+            if( (node_i == 0) || (node_i == m_cellSize[0]) ||
+                (node_j == 0) || (node_j == m_cellSize[1]) )
+                m_surfaceParticles.emplace_back(gridToParticleID(node_i, node_j));
+
         // Check particle indexing in mesh
         for(const auto& element: m_meshElements)
             for(const auto vertex: element)
@@ -88,10 +96,10 @@ struct LatticeMesh : public FiniteElementMesh<T>
         m_particleUndeformedX = m_particleX;
 
         // Identify particles on left and right handles
-        for(int node_j = 0; node_j <= m_cellSize[1]; node_j++){
-            m_leftHandleIndices.push_back(gridToParticleID(0, node_j));
-            m_rightHandleIndices.push_back(gridToParticleID(m_cellSize[0], node_j));
-        }
+        // for(int node_j = 0; node_j <= m_cellSize[1]; node_j++){
+        //     m_leftHandleIndices.push_back(gridToParticleID(0, node_j));
+        //     m_rightHandleIndices.push_back(gridToParticleID(m_cellSize[0], node_j));
+        // }
     }
 
     void initializeDeformation()
@@ -138,9 +146,9 @@ int main(int argc, char *argv[])
     LatticeMesh<float> simulationMesh;
     simulationMesh.m_cellSize = { 20, 20 };
     simulationMesh.m_gridDX = 0.05;
-    simulationMesh.m_nFrames = 30;
+    simulationMesh.m_nFrames = 100;
     simulationMesh.m_subSteps = 1;
-    simulationMesh.m_frameDt = 0.1;
+    simulationMesh.m_frameDt = 0.02;
 
     // Initialize the simulation example
     simulationMesh.initialize();
