@@ -1,3 +1,5 @@
+#include <iostream>
+
 #include "AnimatedTetrahedronMesh.h"
 
 #include <Eigen/Dense>
