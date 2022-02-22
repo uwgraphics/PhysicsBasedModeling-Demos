@@ -179,7 +179,7 @@ struct LatticeMesh : public AnimatedMesh<T, 3>
         initializeParticles();
 
         // Also resize the velocities to match
-        m_particleV.resize(m_particleX.size());
+        m_particleV.resize(m_particleX.size(), Vector2::Zero());
     }
 
     void prepareFrame(const int frame)
@@ -233,7 +233,7 @@ struct LatticeMesh : public AnimatedMesh<T, 3>
     void simulateSubstep(const T dt)
     {
         const int nParticles = m_particleX.size();
-        std::vector<Vector2> force(nParticles);
+        std::vector<Vector2> force(nParticles, Vector2::Zero());
 
         addForce(force);
         for(int p = 0; p < nParticles; p++)
