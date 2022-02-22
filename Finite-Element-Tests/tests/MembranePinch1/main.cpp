@@ -271,7 +271,7 @@ struct LatticeMesh : public AnimatedMesh<T, 3>
     void simulateSubstep(const T dt)
     {
         const int nParticles = m_particleX.size();
-        std::vector<Vector2> force(nParticles);
+        std::vector<Vector2> force(nParticles, Vector2::Zero());
 
         addForce(force);
         for(int p = 0; p < nParticles; p++)
@@ -297,7 +297,7 @@ int main(int argc, char *argv[])
     LatticeMesh<float> simulationMesh;
     simulationMesh.m_cellSize = { 40, 40 };
     simulationMesh.m_gridDX = 0.025;
-    simulationMesh.m_nFrames = 50;
+    simulationMesh.m_nFrames = 200;
     simulationMesh.m_subSteps = 10;
     simulationMesh.m_frameDt = 0.1;
 
