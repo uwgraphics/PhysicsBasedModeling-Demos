@@ -1,4 +1,4 @@
-add_executable (GroundCollision1
+add_executable (GroundCollision3D
         main.cpp
         )
 
@@ -6,7 +6,7 @@ add_executable (GroundCollision1
 find_package(Eigen3)
 # set(EIGEN3_INCLUDE_DIRS /usr/include/eigen3/)
 
-target_include_directories(GroundCollision1
+target_include_directories(GroundCollision3D
         PUBLIC
             ${USD_INC_DIR}
             ${EIGEN3_INCLUDE_DIRS}
@@ -14,7 +14,7 @@ target_include_directories(GroundCollision1
         )
 
 target_link_libraries(
-        GroundCollision1
+        GroundCollision3D
                 ${USD_LIB_DIR}/libusd_gf.so
                 ${USD_LIB_DIR}/libusd_sdf.so
                 ${USD_LIB_DIR}/libusd_tf.so

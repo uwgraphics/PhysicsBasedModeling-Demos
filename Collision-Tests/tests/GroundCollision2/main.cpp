@@ -1,3 +1,5 @@
+#include <iostream>
+
 #include "FiniteElementMesh.h"
 
 #include <Eigen/Dense>
