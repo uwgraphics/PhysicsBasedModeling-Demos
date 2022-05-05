@@ -12,6 +12,7 @@ struct LatticeMesh : public FiniteElementMesh<T>
 
     // from AnimatedTetrahedonMesh
     using Base::m_meshElements;
+    using Base::m_meshBoundaryElements;
     using Base::m_particleX;
     using Base::initializeUSD;
     using Base::initializeTopology;
@@ -19,6 +20,7 @@ struct LatticeMesh : public FiniteElementMesh<T>
     using Vector3 = typename Base::Vector3;
 
     // from FiniteElementMesh
+    using Base::m_surfaceParticles;
     using Base::m_particleV;
     using Base::m_particleMass;
     using Base::initializeUndeformedConfiguration;
@@ -102,6 +104,16 @@ struct LatticeMesh : public FiniteElementMesh<T>
         initializeTopology();
         initializeParticles();
 
+        // Record surface particles (for collisions)
+        std::vector<bool> particleOnSurface(m_particleX.size());
+        for(auto element: m_meshBoundaryElements) {
+            for (auto p: element)
+                if (!particleOnSurface[p]){
+                    m_surfaceParticles.push_back(p);
+                    particleOnSurface[p] = true;
+                }
+        }
+
         // Check particle indexing in mesh
 
         for(const auto& element: m_meshElements)
@@ -119,6 +131,7 @@ struct LatticeMesh : public FiniteElementMesh<T>
         m_particleUndeformedX = m_particleX;
 
         // Identify particles on left and right handles
+#if 0
         for(int node_j = 0; node_j <= m_cellSize[1]; node_j++)
             for(int node_k = 0; node_k <= m_cellSize[2]; node_k++) {
                 {
@@ -140,6 +153,7 @@ struct LatticeMesh : public FiniteElementMesh<T>
                         m_rightHandleIndices.push_back(search->second);
                 }
             }
+#endif
     }
 
     void initializeDeformation()
@@ -185,9 +199,9 @@ int main(int argc, char *argv[])
     LatticeMesh<float> simulationMesh;
     simulationMesh.m_cellSize = { 10, 10, 10 };
     simulationMesh.m_gridDX = 0.1;
-    simulationMesh.m_nFrames = 5;
+    simulationMesh.m_nFrames = 50;
     simulationMesh.m_subSteps = 1;
-    simulationMesh.m_frameDt = 0.05;
+    simulationMesh.m_frameDt = 0.04;
 
     // Initialize the simulation example
     simulationMesh.initialize();
