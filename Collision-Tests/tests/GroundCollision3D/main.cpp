@@ -199,7 +199,7 @@ int main(int argc, char *argv[])
     LatticeMesh<float> simulationMesh;
     simulationMesh.m_cellSize = { 10, 10, 10 };
     simulationMesh.m_gridDX = 0.1;
-    simulationMesh.m_nFrames = 50;
+    simulationMesh.m_nFrames = 10;
     simulationMesh.m_subSteps = 1;
     simulationMesh.m_frameDt = 0.04;
 
